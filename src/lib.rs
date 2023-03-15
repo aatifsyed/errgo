@@ -3,6 +3,8 @@ use proc_macro_error::{emit_error, proc_macro_error};
 use quote::quote;
 use syn::{parse2, parse_macro_input, visit_mut::VisitMut, ItemFn};
 
+mod data;
+
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn err_as_you_go(
