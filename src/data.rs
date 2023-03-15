@@ -2,8 +2,8 @@ use syn::{
     braced, parenthesized, parse,
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
-    token, Attribute, Expr, Field, Fields, FieldsNamed, FieldsUnnamed, Ident, Token, Type, Variant,
-    Visibility,
+    token, Attribute, Expr, ExprCall, ExprPath, ExprStruct, Field, FieldValue, Fields, FieldsNamed,
+    FieldsUnnamed, Ident, Path, PathSegment, Token, Type, Variant, Visibility,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -12,6 +12,65 @@ pub struct VariantWithValue {
     pub ident: Ident,
     pub fields: MultipleFieldsWithValues,
     pub discriminant: Option<(Token![=], Expr)>,
+}
+
+impl VariantWithValue {
+    pub fn into_syn_variant(self) -> syn::Variant {
+        self.into()
+    }
+    pub fn into_syn_expr_with_prefix(self, mut prefix: Path) -> syn::Expr {
+        prefix.segments.push(PathSegment::from(self.ident));
+        let path = prefix;
+        match self.fields {
+            MultipleFieldsWithValues::Named(MultipleFieldsWithValueNamed {
+                brace_token: _,
+                fields,
+            }) => Expr::Struct(ExprStruct {
+                attrs: vec![],
+                path,
+                brace_token: Default::default(),
+                fields: fields
+                    .into_iter()
+                    .map(
+                        |FieldWithValueNamed {
+                             ident,
+                             colon_token,
+                             expr,
+                             ..
+                         }| FieldValue {
+                            attrs: vec![],
+                            member: syn::Member::Named(ident),
+                            colon_token: Some(colon_token),
+                            expr,
+                        },
+                    )
+                    .collect(),
+                dot2_token: None,
+                rest: None,
+            }),
+            MultipleFieldsWithValues::Unnamed(MultipleFieldsWithValuesUnnamed {
+                paren_token: _,
+                fields,
+            }) => Expr::Call(ExprCall {
+                attrs: vec![],
+                func: Box::new(Expr::from(ExprPath {
+                    attrs: vec![],
+                    qself: None,
+                    path,
+                })),
+                paren_token: Default::default(),
+                args: fields
+                    .into_iter()
+                    .map(|FieldWithValueUnnamed { expr, .. }| expr)
+                    .collect(),
+            }),
+            MultipleFieldsWithValues::Unit => Expr::Path(ExprPath {
+                attrs: vec![],
+                qself: None,
+                path,
+            }),
+        }
+    }
 }
 
 impl From<VariantWithValue> for Variant {
@@ -56,7 +115,7 @@ impl Parse for VariantWithValue {
 #[derive(Debug, Clone, PartialEq)]
 pub enum MultipleFieldsWithValues {
     Named(MultipleFieldsWithValueNamed),
-    Unnamed(MultipleFieldsWithValueUnnamed),
+    Unnamed(MultipleFieldsWithValuesUnnamed),
     Unit,
 }
 
@@ -131,13 +190,13 @@ impl Parse for FieldWithValueNamed {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct MultipleFieldsWithValueUnnamed {
+pub struct MultipleFieldsWithValuesUnnamed {
     pub paren_token: token::Paren,
     pub fields: Punctuated<FieldWithValueUnnamed, Token![,]>,
 }
 
-impl From<MultipleFieldsWithValueUnnamed> for FieldsUnnamed {
-    fn from(value: MultipleFieldsWithValueUnnamed) -> Self {
+impl From<MultipleFieldsWithValuesUnnamed> for FieldsUnnamed {
+    fn from(value: MultipleFieldsWithValuesUnnamed) -> Self {
         Self {
             paren_token: value.paren_token,
             unnamed: value.fields.into_iter().map(Field::from).collect(),
@@ -145,7 +204,7 @@ impl From<MultipleFieldsWithValueUnnamed> for FieldsUnnamed {
     }
 }
 
-impl Parse for MultipleFieldsWithValueUnnamed {
+impl Parse for MultipleFieldsWithValuesUnnamed {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let content;
         Ok(Self {
@@ -196,12 +255,34 @@ mod tests {
     use quote::quote;
     use syn::{LitInt, PathSegment};
 
-    fn do_test<T>(tokens: proc_macro2::TokenStream, expected: T)
+    fn test_parse<T>(tokens: proc_macro2::TokenStream, expected: T)
     where
         T: syn::parse::Parse + PartialEq + fmt::Debug,
     {
         let actual = syn::parse2::<T>(tokens).expect("couldn't parse tokens");
         assert_eq!(expected, actual);
+    }
+
+    fn test_use(
+        call_site: proc_macro2::TokenStream,
+        expected_construction: proc_macro2::TokenStream,
+        expected_definition: proc_macro2::TokenStream,
+    ) {
+        let call_site = syn::parse2::<VariantWithValue>(call_site).expect("invalid call_site");
+
+        let expected_construction =
+            syn::parse2::<Expr>(expected_construction).expect("invalid expected_construction");
+        assert_eq!(
+            expected_construction,
+            call_site.clone().into_syn_expr_with_prefix(Path {
+                leading_colon: None,
+                segments: Punctuated::new()
+            })
+        );
+
+        let expected_definition =
+            syn::parse2::<Variant>(expected_definition).expect("invalid expected_definition");
+        assert_eq!(expected_definition, call_site.into_syn_variant());
     }
 
     fn ident(s: &str) -> Ident {
@@ -229,8 +310,8 @@ mod tests {
     }
 
     #[test]
-    fn unit_variant() {
-        do_test(
+    fn parse_unit_variant() {
+        test_parse(
             quote! {Foo},
             VariantWithValue {
                 attrs: vec![],
@@ -242,8 +323,8 @@ mod tests {
     }
 
     #[test]
-    fn unit_variant_with_discriminant() {
-        do_test(
+    fn parse_unit_variant_with_discriminant() {
+        test_parse(
             quote! {Foo = 1},
             VariantWithValue {
                 attrs: vec![],
@@ -255,8 +336,8 @@ mod tests {
     }
 
     #[test]
-    fn named_variant() {
-        do_test(
+    fn parse_named_variant() {
+        test_parse(
             quote!(Foo { bar: usize = 1 }),
             VariantWithValue {
                 attrs: vec![],
@@ -278,13 +359,13 @@ mod tests {
     }
 
     #[test]
-    fn unnamed_variant() {
-        do_test(
+    fn parse_unnamed_variant() {
+        test_parse(
             quote!(Foo(usize = 1)),
             VariantWithValue {
                 attrs: vec![],
                 ident: ident("Foo"),
-                fields: MultipleFieldsWithValues::Unnamed(MultipleFieldsWithValueUnnamed {
+                fields: MultipleFieldsWithValues::Unnamed(MultipleFieldsWithValuesUnnamed {
                     paren_token: Default::default(),
                     fields: Punctuated::from_iter([FieldWithValueUnnamed {
                         attrs: vec![],
@@ -296,5 +377,22 @@ mod tests {
                 discriminant: None,
             },
         )
+    }
+
+    #[test]
+    fn use_unit_variant() {
+        test_use(quote!(Foo), quote!(Foo), quote!(Foo))
+    }
+    #[test]
+    fn use_named_variant() {
+        test_use(
+            quote!(Foo { bar: usize = 1 }),
+            quote!(Foo { bar: 1 }),
+            quote!(Foo { bar: usize }),
+        )
+    }
+    #[test]
+    fn use_unnamed_variant() {
+        test_use(quote!(Foo(usize = 1)), quote!(Foo(1)), quote!(Foo(usize)))
     }
 }
