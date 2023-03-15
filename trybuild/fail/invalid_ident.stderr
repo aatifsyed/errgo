@@ -1,0 +1,5 @@
+error: expected identifier
+ --> trybuild/fail/invalid_ident.rs:5:10
+  |
+5 |     err!(1Bar);
+  |          ^^^^
