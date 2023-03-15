@@ -386,13 +386,23 @@ mod tests {
     #[test]
     fn use_named_variant() {
         test_use(
-            quote!(Foo { bar: usize = 1 }),
-            quote!(Foo { bar: 1 }),
-            quote!(Foo { bar: usize }),
+            quote!(Foo {
+                bar: usize = 1,
+                baz: char = 'a'
+            }),
+            quote!(Foo { bar: 1, baz: 'a' }),
+            quote!(Foo {
+                bar: usize,
+                baz: char
+            }),
         )
     }
     #[test]
     fn use_unnamed_variant() {
-        test_use(quote!(Foo(usize = 1)), quote!(Foo(1)), quote!(Foo(usize)))
+        test_use(
+            quote!(Foo(usize = 1, char = 'a')),
+            quote!(Foo(1, 'a')),
+            quote!(Foo(usize, char)),
+        )
     }
 }
