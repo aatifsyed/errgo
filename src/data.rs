@@ -47,6 +47,7 @@ impl VariantWithValue {
                     .collect(),
                 dot2_token: None,
                 rest: None,
+                qself: None,
             }),
             MultipleFieldsWithValues::Unnamed(MultipleFieldsWithValuesUnnamed {
                 paren_token: _,
@@ -149,7 +150,7 @@ impl Parse for MultipleFieldsWithValueNamed {
         let content;
         Ok(Self {
             brace_token: braced!(content in input),
-            fields: content.parse_terminated(FieldWithValueNamed::parse)?,
+            fields: content.parse_terminated(FieldWithValueNamed::parse, Token!(,))?,
         })
     }
 }
@@ -172,6 +173,7 @@ impl From<FieldWithValueNamed> for Field {
             ident: Some(value.ident),
             colon_token: Some(value.colon_token),
             ty: value.ty,
+            mutability: syn::FieldMutability::None,
         }
     }
 }
@@ -209,7 +211,7 @@ impl Parse for MultipleFieldsWithValuesUnnamed {
         let content;
         Ok(Self {
             paren_token: parenthesized!(content in input),
-            fields: content.parse_terminated(FieldWithValueUnnamed::parse)?,
+            fields: content.parse_terminated(FieldWithValueUnnamed::parse, Token!(,))?,
         })
     }
 }
@@ -230,6 +232,7 @@ impl From<FieldWithValueUnnamed> for Field {
             ident: None,
             colon_token: None,
             ty: value.ty,
+            mutability: syn::FieldMutability::None,
         }
     }
 }
