@@ -2,6 +2,10 @@
 name = "err-as-you-go"
 version = "0.1.0"
 edition = "2021"
+license = "Apache-2.0 OR MIT"
+description = "easy inline error types"
+repository = "https://github.com/aatifsyed/err-as-you-go"
+documentation = "https://docs.rs/err-as-you-go"
 
 [lib]
 path = "src/lib.rs" # needed by cargo-readme =P
