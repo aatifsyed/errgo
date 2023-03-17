@@ -8,10 +8,13 @@
 
 # `err-as-you-go`
 
-Crates like [anyhow] allow for easily constructing ad-hoc errors for function returns.
-However, these errors are opaque to the caller.
+Generate `enum` error types inline.
 
-This crate allows you to create errors just as easily as [anyhow], but with handleable branches for callers.
+If you want:
+- to easy throw errors inline like with [anyhow]
+- to make your error types handleable in a nice enum like [thiserror]
+
+then this is the crate for you!
 
 ```rust
 use err_as_you_go::err_as_you_go;
@@ -32,6 +35,16 @@ fn shave_yaks(
         }));
     }
     Ok(())
+}
+```
+Under the hood, a struct like this is generated:
+```rust
+enum ShaveYaksError { // name and visibility are taken from function return type and visibility
+    NotEnoughRazors,
+    NotEnoughBuckets {
+        got: usize,
+        required: usize,
+    }
 }
 ```
 
@@ -57,10 +70,10 @@ fn shave_yaks(
 }
 ```
 
-Under the hood, an enum like this is generated:
+Which generates the following:
 ```rust
 #[derive(Debug, thiserror::Error)]
-enum ShaveYaksError { // name is taken from function return type
+enum ShaveYaksError {
     #[error("not enough razors!")]
     NotEnoughRazors,
     #[error("not enough buckets - needed {required}")]
@@ -71,6 +84,7 @@ enum ShaveYaksError { // name is taken from function return type
 }
 ```
 And `err!` macro invocations are replaced with struct instantiations - no matter where they are in the function body!
+
 If you need to reuse the same variant within a function, just use the normal construction syntax:
 ```rust
 #[err_as_you_go]
