@@ -49,7 +49,7 @@ impl Config {
             if attributes.is_empty() {
                 return Err(stage.error("`attributes` cannot be empty"));
             }
-            if self.derives.is_some() {
+            if self.attributes.is_some() {
                 return Err(stage.error("`attributes` specified more than once"));
             }
             self.attributes = Some(attributes);

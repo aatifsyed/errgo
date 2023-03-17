@@ -47,8 +47,15 @@ pub fn err_as_you_go(
     }
 
     let variants = visitor.variants;
+    let derives = match config.derives {
+        Some(derives) => quote!(#[derive(
+            #(#derives),*
+        )]),
+        None => quote!(),
+    };
 
     quote! {
+        #derives
         #error_vis enum #error_name {
             #(#variants),*
         }
