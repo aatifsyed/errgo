@@ -1,3 +1,82 @@
+//! Crates like [anyhow] allow for easily constructing ad-hoc errors for function returns.
+//! However, these errors are opaque to the caller.
+//!
+//! This crate allows you to create errors just as easily as [anyhow], but with handleable branches for callers.
+//!
+//! ```
+//! use err_as_you_go::err_as_you_go;
+//!
+//! #[err_as_you_go]
+//! fn shave_yaks(
+//!     num_yaks: usize,
+//!     empty_buckets: usize,
+//!     num_razors: usize,
+//! ) -> Result<(), ShaveYaksError> {
+//!     if num_razors == 0 {
+//!         return Err(err!(NotEnoughRazors));
+//!     }
+//!     if num_yaks > empty_buckets {
+//!         return Err(err!(NotEnoughBuckets {
+//!             got: usize = empty_buckets,
+//!             required: usize = num_yaks,
+//!         }));
+//!     }
+//!     Ok(())
+//! }
+//! ```
+//!
+//! Importantly, you can derive on the generated struct, _and_ passthrough attributes, allowing you to use crates like [thiserror].
+//! ```
+//! # use err_as_you_go::err_as_you_go;
+//!
+//! #[err_as_you_go(derive(Debug, thiserror::Error))]
+//! fn shave_yaks(
+//!     num_yaks: usize,
+//!     empty_buckets: usize,
+//!     num_razors: usize,
+//! ) -> Result<(), ShaveYaksError> {
+//!     if num_razors == 0 {
+//!         return Err(err!(#[error("not enough razors!")] NotEnoughRazors));
+//!     }
+//!     if num_yaks > empty_buckets {
+//!         return Err(err!(#[error("not enough buckets - needed {required}")] NotEnoughBuckets {
+//!             got: usize = empty_buckets,
+//!             required: usize = num_yaks,
+//!         }));
+//!     }
+//!     Ok(())
+//! }
+//! ```
+//!
+//! Under the hood, an enum like this is generated:
+//! ```
+//! #[derive(Debug, thiserror::Error)]
+//! enum ShaveYaksError { // name is taken from function return type
+//!     #[error("not enough razors!")]
+//!     NotEnoughRazors,
+//!     #[error("not enough buckets - needed {required}")]
+//!     NotEnoughBuckets {
+//!         got: usize,
+//!         required: usize,
+//!     }
+//! }
+//! ```
+//! And `err!` macro invocations are replaced with struct instantiations - no matter where they are in the function body!
+//! If you need to reuse the same variant within a function, just use the normal construction syntax:
+//! ```
+//! # use err_as_you_go::err_as_you_go;
+//! #[err_as_you_go]
+//! fn foo() -> Result<(), FooError> {
+//!     if true {
+//!         return Err(err!(Bar));
+//!     }
+//!     Err(FooError::Bar)
+//! }
+//! ```
+//!
+//! [anyhow]: https://docs.rs/anyhow
+//! [thiserror]: https://docs.rs/thiserror
+
 use config::Config;
 use data::VariantWithValue;
 use log::debug;
@@ -12,6 +91,39 @@ use syn::{
 mod config;
 mod data;
 
+/// See [module documentation](index.html) for general usage.
+///
+/// # `err!` construction
+/// Instances of `err!` will be parsed like so:
+/// ```
+/// # #[err_as_you_go::err_as_you_go]
+/// # fn foo() -> Result<(), FooError> {
+/// err!(Unity);                        // A unit enum variant
+/// err!(Tuply(usize = 1, char = 'a')); // A tuple enum variant
+/// err!(Structy {                      // A struct enum variant
+///         u: usize = 1,
+///         c: char = 'a',
+/// });
+/// # Ok(())
+/// # }
+/// ```
+/// # Arguments
+/// `derive` arguments are passed through to the generated struct.
+/// ```
+/// # use err_as_you_go::err_as_you_go;
+/// #[err_as_you_go(derive(Debug, Clone, Copy))]
+/// fn foo() -> Result<(), FooError> { Ok(()) }
+/// ```
+///
+/// `attributes` arguments are passed through to the top of the generated struct
+/// ```
+/// # use err_as_you_go::err_as_you_go;
+/// #[err_as_you_go(attributes(
+///     #[must_use = "maybe you missed something!"]
+///     #[repr(u8)]
+/// ))]
+/// fn foo() -> Result<(), FooError> { Ok(()) }
+/// ```
 #[proc_macro_attribute]
 #[proc_macro_error]
 pub fn err_as_you_go(
@@ -103,6 +215,7 @@ fn get_struct_name_from_return_type(return_type: &ReturnType) -> Option<Ident> {
 }
 
 /// Implementation detail
+// Allows use to swap the macro in-place in our visitor.
 #[doc(hidden)]
 #[proc_macro]
 #[proc_macro_error]
@@ -178,6 +291,18 @@ mod tests {
         let t = trybuild::TestCases::new();
         t.pass("trybuild/pass/**/*.rs");
         t.compile_fail("trybuild/fail/**/*.rs")
+    }
+
+    #[test]
+    fn readme() {
+        let expected = std::process::Command::new("cargo")
+            .arg("readme")
+            .output()
+            .expect("couldn't run `cargo readme`");
+        let expected = String::from_utf8_lossy(&expected.stdout);
+        let actual = std::fs::read("README.md").expect("couldn't read README.md");
+        let actual = String::from_utf8_lossy(&actual);
+        pretty_assertions::assert_eq!(expected, actual);
     }
 
     #[test]
