@@ -1,7 +1,12 @@
+use config::Config;
+use log::debug;
 use proc_macro2::{Ident, Span, TokenStream};
 use proc_macro_error::{emit_error, proc_macro_error};
 use quote::quote;
-use syn::{parse2, parse_macro_input, visit_mut::VisitMut, ItemFn, Path, PathSegment};
+use syn::{
+    parse2, parse_macro_input, visit_mut::VisitMut, AngleBracketedGenericArguments,
+    GenericArgument, ItemFn, Path, PathArguments, PathSegment, ReturnType, TypePath,
+};
 
 mod config;
 mod data;
@@ -14,22 +19,23 @@ pub fn err_as_you_go(
 ) -> proc_macro::TokenStream {
     pretty_env_logger::try_init_custom_env("RUST_LOG_ERR_AS_YOU_GO").ok();
 
+    debug!("attr={attr:?}");
+
     //////////////////////
     // Parse our inputs //
     //////////////////////
-    let attr = TokenStream::from(attr);
-    if !attr.is_empty() {
-        emit_error!(attr, "arguments to this attribute are not supported")
-    }
+    let config = parse_macro_input!(attr as Config);
     let mut item = parse_macro_input!(item as ItemFn);
 
-    let error_name = Ident::new(
-        &format!(
-            "{}Error",
-            heck::AsUpperCamelCase(item.sig.ident.to_string())
-        ),
-        Span::call_site(),
-    );
+    debug!("config={config:?}");
+
+    let Some(error_name) = get_struct_name_from_return_type(&item.sig.output) else {
+        emit_error!(
+            item.sig,
+            "unsupported return type - function must return a `Result<_, SomeConcreteErr>`"
+        );
+        return quote!(#item).into();
+    };
     let error_vis = item.vis.clone();
 
     let mut collector = CollectErrorVariants::new(error_name.clone());
@@ -49,6 +55,43 @@ pub fn err_as_you_go(
         #item
     }
     .into()
+}
+
+fn get_struct_name_from_return_type(return_type: &ReturnType) -> Option<Ident> {
+    if let ReturnType::Type(_, ty) = return_type {
+        if let syn::Type::Path(TypePath {
+            qself: None,
+            path: Path { ref segments, .. },
+        }) = **ty
+        {
+            if let Some(PathSegment {
+                ident,
+                arguments:
+                    PathArguments::AngleBracketed(AngleBracketedGenericArguments { args, .. }),
+            }) = segments.last()
+            {
+                if ident == "Result" && args.len() == 2 {
+                    if let Some(GenericArgument::Type(syn::Type::Path(TypePath {
+                        qself: None,
+                        path:
+                            Path {
+                                segments,
+                                leading_colon: None,
+                            },
+                    }))) = args.into_iter().nth(1)
+                    {
+                        if segments.len() == 1 {
+                            let PathSegment { ident, arguments } = &segments[0];
+                            if arguments.is_empty() {
+                                return Some(ident.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
 }
 
 /// Implementation detail
@@ -125,10 +168,26 @@ mod test_utils {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
-    fn test() {
+    fn trybuild() {
         let t = trybuild::TestCases::new();
         t.pass("trybuild/pass/**/*.rs");
         t.compile_fail("trybuild/fail/**/*.rs")
+    }
+
+    #[test]
+    fn get_result_name() {
+        let ident = get_struct_name_from_return_type(
+            &syn::parse2(quote!(-> Result<T, SomeConcreteErr>)).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(ident, "SomeConcreteErr");
+
+        let ident = get_struct_name_from_return_type(
+            &syn::parse2(quote!(-> ::std::result::Result<T, SomeConcreteErr>)).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(ident, "SomeConcreteErr");
     }
 }

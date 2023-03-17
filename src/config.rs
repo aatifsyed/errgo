@@ -16,7 +16,9 @@ pub struct Config {
 impl Parse for Config {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut config = Self::default();
-        syn::meta::parser(|stage| config.parse_stage(stage)).parse2(input.parse()?)?;
+        if !input.is_empty() {
+            syn::meta::parser(|stage| config.parse_stage(stage)).parse2(input.parse()?)?;
+        }
         Ok(config)
     }
 }

@@ -1,5 +1,5 @@
 error: expected identifier
- --> trybuild/fail/invalid_ident.rs:5:10
+ --> trybuild/fail/invalid_ident.rs:5:21
   |
-5 |     err!(1Bar);
-  |          ^^^^
+5 |     return Err(err!(1Bar));
+  |                     ^^^^

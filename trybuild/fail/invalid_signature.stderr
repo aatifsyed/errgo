@@ -1,0 +1,11 @@
+error: unsupported return type - function must return a `Result<_, SomeConcreteErr>`
+ --> trybuild/fail/invalid_signature.rs:4:1
+  |
+4 | fn foo() -> std::io::Result<()> {
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: unsupported return type - function must return a `Result<_, SomeConcreteErr>`
+ --> trybuild/fail/invalid_signature.rs:9:1
+  |
+9 | fn bar() {}
+  | ^^^^^^^^

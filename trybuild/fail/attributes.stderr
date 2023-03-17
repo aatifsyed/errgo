@@ -1,5 +1,0 @@
-error: arguments to this attribute are not supported
- --> trybuild/fail/attributes.rs:3:17
-  |
-3 | #[err_as_you_go(bar)]
-  |                 ^^^
