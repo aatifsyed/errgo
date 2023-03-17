@@ -1,11 +1,12 @@
 use quote::ToTokens;
+mod syn_meta::ParseNestedMeta;
 use syn::{
-    meta::ParseNestedMeta,
     parenthesized,
     parse::{Parse, ParseStream, Parser},
     punctuated::Punctuated,
     Attribute, Path, Token,
 };
+mod syn_meta;
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Config {
