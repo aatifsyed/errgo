@@ -1,12 +1,16 @@
+//! LICENSE: Apache 2.0 OR MIT
+
+#![allow(unused)]
+
 //! Facility for interpreting structured content inside of an `Attribute`.
 
-use crate::ext::IdentExt;
-use crate::lit::Lit;
-use crate::parse::{Error, ParseStream, Parser, Result};
-use crate::path::{Path, PathSegment};
-use crate::punctuated::Punctuated;
 use proc_macro2::Ident;
 use std::fmt::Display;
+use syn::ext::IdentExt;
+use syn::parse::{Error, ParseStream, Parser, Result};
+use syn::punctuated::Punctuated;
+use syn::{parenthesized, Lit, Token};
+use syn::{Path, PathSegment};
 
 /// Make a parser that is usable with `parse_macro_input!` in a
 /// `#[proc_macro_attribute]` macro.
@@ -24,7 +28,7 @@ use std::fmt::Display;
 ///
 /// This example implements an attribute macro whose invocations look like this:
 ///
-/// ```
+/// ```ignore
 /// # const IGNORE: &str = stringify! {
 /// #[tea(kind = "EarlGrey", hot)]
 /// struct Picard {...}
@@ -37,7 +41,7 @@ use std::fmt::Display;
 /// - `hot`
 /// - `with(sugar, milk, ...)`, a comma-separated list of ingredients
 ///
-/// ```
+/// ```ignore
 /// # extern crate proc_macro;
 /// #
 /// use proc_macro::TokenStream;
@@ -90,7 +94,7 @@ use std::fmt::Display;
 ///
 /// Same as above but we factor out most of the logic into a separate function.
 ///
-/// ```
+/// ```ignore
 /// # extern crate proc_macro;
 /// #
 /// use proc_macro::TokenStream;
@@ -169,7 +173,7 @@ impl<'a> ParseNestedMeta<'a> {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// use syn::{parse_quote, Attribute, LitStr};
     ///
     /// let attr: Attribute = parse_quote! {
@@ -203,7 +207,7 @@ impl<'a> ParseNestedMeta<'a> {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// use syn::{parse_quote, Attribute};
     ///
     /// let attr: Attribute = parse_quote! {
@@ -239,7 +243,7 @@ impl<'a> ParseNestedMeta<'a> {
     /// arbitrary tokens within those parentheses so for the crazier stuff,
     /// `parse_nested_meta` is not what you want.
     ///
-    /// ```
+    /// ```ignore
     /// use syn::{parenthesized, parse_quote, Attribute, LitInt};
     ///
     /// let attr: Attribute = parse_quote! {
@@ -278,7 +282,7 @@ impl<'a> ParseNestedMeta<'a> {
     /// There are 2 ways you might call this. First, if `meta.path` is not
     /// something you recognize:
     ///
-    /// ```
+    /// ```ignore
     /// # use syn::Attribute;
     /// #
     /// # fn example(attr: &Attribute) -> syn::Result<()> {
@@ -308,7 +312,7 @@ impl<'a> ParseNestedMeta<'a> {
     /// More usefully, the second place is if you've already parsed a value but
     /// have decided not to accept the value:
     ///
-    /// ```
+    /// ```ignore
     /// # use syn::Attribute;
     /// #
     /// # fn example(attr: &Attribute) -> syn::Result<()> {
@@ -370,8 +374,7 @@ impl<'a> ParseNestedMeta<'a> {
     /// ```
     pub fn error(&self, msg: impl Display) -> Error {
         let start_span = self.path.segments[0].ident.span();
-        let end_span = self.input.cursor().prev_span();
-        crate::error::new2(start_span, end_span, msg)
+        syn::Error::new(start_span, msg)
     }
 }
 

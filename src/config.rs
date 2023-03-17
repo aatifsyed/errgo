@@ -1,5 +1,4 @@
 use quote::ToTokens;
-mod syn_meta::ParseNestedMeta;
 use syn::{
     parenthesized,
     parse::{Parse, ParseStream, Parser},
@@ -7,6 +6,7 @@ use syn::{
     Attribute, Path, Token,
 };
 mod syn_meta;
+use syn_meta::{parser, ParseNestedMeta};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Config {
@@ -18,7 +18,7 @@ impl Parse for Config {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let mut config = Self::default();
         if !input.is_empty() {
-            syn::meta::parser(|stage| config.parse_stage(stage)).parse2(input.parse()?)?;
+            parser(|stage| config.parse_stage(stage)).parse2(input.parse()?)?;
         }
         Ok(config)
     }
