@@ -1,8 +1,9 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use proc_macro_error::{emit_error, proc_macro_error};
 use quote::quote;
-use syn::{parse2, parse_macro_input, visit_mut::VisitMut, ItemFn};
+use syn::{parse2, parse_macro_input, visit_mut::VisitMut, ItemFn, Path, PathSegment};
 
+mod config;
 mod data;
 
 #[proc_macro_attribute]
@@ -96,14 +97,29 @@ impl syn::visit_mut::VisitMut for CollectErrorVariants {
     }
 }
 
-fn path<'a>(segments: impl IntoIterator<Item = &'a str>) -> syn::Path {
+fn path<'a>(segments: impl IntoIterator<Item = &'a str>) -> Path {
     syn::Path {
         leading_colon: None,
-        segments: syn::punctuated::Punctuated::from_iter(
-            segments
-                .into_iter()
-                .map(|it| syn::PathSegment::from(syn::Ident::new(it, Span::call_site()))),
-        ),
+        segments: segments
+            .into_iter()
+            .map(|segment| PathSegment::from(ident(segment)))
+            .collect(),
+    }
+}
+
+fn ident(s: &str) -> Ident {
+    Ident::new(s, Span::call_site())
+}
+
+#[cfg(test)]
+mod test_utils {
+
+    pub fn test_parse<T>(tokens: proc_macro2::TokenStream, expected: T)
+    where
+        T: syn::parse::Parse + PartialEq + std::fmt::Debug,
+    {
+        let actual = syn::parse2::<T>(tokens).expect("couldn't parse tokens");
+        pretty_assertions::assert_eq!(expected, actual);
     }
 }
 

@@ -47,6 +47,7 @@ impl VariantWithValue {
                     .collect(),
                 dot2_token: None,
                 rest: None,
+                qself: None,
             }),
             MultipleFieldsWithValues::Unnamed(MultipleFieldsWithValuesUnnamed {
                 paren_token: _,
@@ -149,7 +150,7 @@ impl Parse for MultipleFieldsWithValueNamed {
         let content;
         Ok(Self {
             brace_token: braced!(content in input),
-            fields: content.parse_terminated(FieldWithValueNamed::parse)?,
+            fields: content.parse_terminated(FieldWithValueNamed::parse, Token![,])?,
         })
     }
 }
@@ -172,6 +173,7 @@ impl From<FieldWithValueNamed> for Field {
             ident: Some(value.ident),
             colon_token: Some(value.colon_token),
             ty: value.ty,
+            mutability: syn::FieldMutability::None,
         }
     }
 }
@@ -209,7 +211,7 @@ impl Parse for MultipleFieldsWithValuesUnnamed {
         let content;
         Ok(Self {
             paren_token: parenthesized!(content in input),
-            fields: content.parse_terminated(FieldWithValueUnnamed::parse)?,
+            fields: content.parse_terminated(FieldWithValueUnnamed::parse, Token![,])?,
         })
     }
 }
@@ -230,6 +232,7 @@ impl From<FieldWithValueUnnamed> for Field {
             ident: None,
             colon_token: None,
             ty: value.ty,
+            mutability: syn::FieldMutability::None,
         }
     }
 }
@@ -249,11 +252,13 @@ impl Parse for FieldWithValueUnnamed {
 mod tests {
     use std::fmt;
 
+    use crate::{ident, path};
+
     use super::*;
     use pretty_assertions::assert_eq;
     use proc_macro2::Span;
     use quote::quote;
-    use syn::{LitInt, PathSegment};
+    use syn::LitInt;
 
     fn test_parse<T>(tokens: proc_macro2::TokenStream, expected: T)
     where
@@ -261,6 +266,13 @@ mod tests {
     {
         let actual = syn::parse2::<T>(tokens).expect("couldn't parse tokens");
         assert_eq!(expected, actual);
+    }
+
+    fn type_path<'a>(segments: impl IntoIterator<Item = &'a str>) -> Type {
+        Type::Path(syn::TypePath {
+            qself: None,
+            path: path(segments),
+        })
     }
 
     fn test_use(
@@ -285,27 +297,10 @@ mod tests {
         assert_eq!(expected_definition, call_site.into_syn_variant());
     }
 
-    fn ident(s: &str) -> Ident {
-        Ident::new(s, Span::call_site())
-    }
-
     fn lit_int(s: &str) -> Expr {
         Expr::Lit(syn::ExprLit {
             attrs: vec![],
             lit: syn::Lit::Int(LitInt::new(s, Span::call_site())),
-        })
-    }
-
-    fn path<'a>(segments: impl IntoIterator<Item = &'a str>) -> Type {
-        Type::Path(syn::TypePath {
-            qself: None,
-            path: syn::Path {
-                leading_colon: None,
-                segments: segments
-                    .into_iter()
-                    .map(|segment| PathSegment::from(ident(segment)))
-                    .collect(),
-            },
         })
     }
 
@@ -348,14 +343,14 @@ mod tests {
                         attrs: vec![],
                         ident: ident("bar"),
                         colon_token: Default::default(),
-                        ty: path(["usize"]),
+                        ty: type_path(["usize"]),
                         eq_token: Default::default(),
                         expr: lit_int("1"),
                     }]),
                 }),
                 discriminant: None,
             },
-        )
+        );
     }
 
     #[test]
@@ -369,7 +364,7 @@ mod tests {
                     paren_token: Default::default(),
                     fields: Punctuated::from_iter([FieldWithValueUnnamed {
                         attrs: vec![],
-                        ty: path(["usize"]),
+                        ty: type_path(["usize"]),
                         eq_token: Default::default(),
                         expr: lit_int("1"),
                     }]),
