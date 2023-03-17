@@ -1,8 +1,9 @@
 use config::Config;
+use data::VariantWithValue;
 use log::debug;
 use proc_macro2::{Ident, Span, TokenStream};
 use proc_macro_error::{emit_error, proc_macro_error};
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::{
     parse2, parse_macro_input, visit_mut::VisitMut, AngleBracketedGenericArguments,
     GenericArgument, ItemFn, Path, PathArguments, PathSegment, ReturnType, TypePath,
@@ -38,14 +39,14 @@ pub fn err_as_you_go(
     };
     let error_vis = item.vis.clone();
 
-    let mut collector = CollectErrorVariants::new(error_name.clone());
-    collector.visit_item_fn_mut(&mut item);
+    let mut visitor = ErrAsYouGoVisitor::new(error_name.clone());
+    visitor.visit_item_fn_mut(&mut item);
 
-    for (src, e) in collector.collection_errors {
+    for (src, e) in visitor.collection_errors {
         emit_error!(src, "{}", e)
     }
 
-    let variants = collector.variants.iter().map(|it| &it.ident);
+    let variants = visitor.variants;
 
     quote! {
         #error_vis enum #error_name {
@@ -102,17 +103,13 @@ pub fn __nothing(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     input
 }
 
-struct ErrorVariant {
-    ident: Ident,
-}
-
-struct CollectErrorVariants {
+struct ErrAsYouGoVisitor {
     error_name: Ident,
-    variants: Vec<ErrorVariant>,
+    variants: Vec<syn::Variant>,
     collection_errors: Vec<(TokenStream, syn::Error)>,
 }
 
-impl CollectErrorVariants {
+impl ErrAsYouGoVisitor {
     fn new(error_name: Ident) -> Self {
         Self {
             error_name,
@@ -122,17 +119,17 @@ impl CollectErrorVariants {
     }
 }
 
-impl syn::visit_mut::VisitMut for CollectErrorVariants {
+impl syn::visit_mut::VisitMut for ErrAsYouGoVisitor {
     fn visit_macro_mut(&mut self, i: &mut syn::Macro) {
         if i.path.is_ident("err") {
-            match parse2::<Ident>(i.tokens.clone()) {
-                Ok(ident) => {
-                    self.variants.push(ErrorVariant {
-                        ident: ident.clone(),
-                    });
+            match parse2::<VariantWithValue>(i.tokens.clone()) {
+                Ok(variant_with_value) => {
+                    self.variants
+                        .push(variant_with_value.clone().into_syn_variant());
                     i.path = path(["err_as_you_go", "__nothing"]);
-                    let error_name = &self.error_name;
-                    i.tokens = quote!(#error_name::#ident);
+                    i.tokens = variant_with_value
+                        .into_syn_expr_with_prefix(Path::from(self.error_name.clone()))
+                        .into_token_stream();
                 }
                 Err(e) => self.collection_errors.push((i.tokens.clone(), e)),
             }
