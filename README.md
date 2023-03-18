@@ -58,13 +58,19 @@ fn shave_yaks(
     num_razors: usize,
 ) -> Result<(), ShaveYaksError> {
     if num_razors == 0 {
-        return Err(err!(#[error("not enough razors!")] NotEnoughRazors));
+        return Err(err!(
+            #[error("not enough razors!")]
+            NotEnoughRazors
+        ));
     }
     if num_yaks > empty_buckets {
-        return Err(err!(#[error("not enough buckets - needed {required}")] NotEnoughBuckets {
-            got: usize = empty_buckets,
-            required: usize = num_yaks,
-        }));
+        return Err(err!(
+            #[error("not enough buckets - needed {required}")]
+            NotEnoughBuckets {
+                got: usize = empty_buckets,
+                required: usize = num_yaks,
+            }
+        ));
     }
     Ok(())
 }
@@ -89,10 +95,8 @@ If you need to reuse the same variant within a function, just use the normal con
 ```rust
 #[err_as_you_go]
 fn foo() -> Result<(), FooError> {
-    if true {
-        return Err(err!(Bar));
-    }
-    Err(FooError::Bar)
+    fallible_op().map_err(|e| err!(IoError(io::Error = e)));
+    Err(FooError::IoError(todo!()))
 }
 ```
 
