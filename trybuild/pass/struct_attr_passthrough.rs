@@ -1,6 +1,6 @@
-use err_as_you_go::err_as_you_go;
+use errgo::errgo;
 
-#[err_as_you_go(attributes(
+#[errgo(attributes(
     #[repr(u8)] 
     #[must_use = "gotta use me"]
 ))]

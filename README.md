@@ -1,12 +1,12 @@
 <div align="center">
 
-[![crates-io](https://img.shields.io/crates/v/err-as-you-go.svg)](https://crates.io/crates/err-as-you-go)
-[![docs-rs](https://docs.rs/err-as-you-go/badge.svg)](https://docs.rs/err-as-you-go)
-[![github](https://img.shields.io/static/v1?label=&message=github&color=grey&logo=github)](https://github.com/aatifsyed/err-as-you-go)
+[![crates-io](https://img.shields.io/crates/v/errgo.svg)](https://crates.io/crates/errgo)
+[![docs-rs](https://docs.rs/errgo/badge.svg)](https://docs.rs/errgo)
+[![github](https://img.shields.io/static/v1?label=&message=github&color=grey&logo=github)](https://github.com/aatifsyed/errgo)
 
 </div>
 
-# `err-as-you-go`
+# `errgo`
 
 Generate `enum` error types inline.
 
@@ -17,9 +17,9 @@ If you want:
 then this is the crate for you!
 
 ```rust
-use err_as_you_go::err_as_you_go;
+use errgo::errgo;
 
-#[err_as_you_go]
+#[errgo]
 fn shave_yaks(
     num_yaks: usize,
     empty_buckets: usize,
@@ -51,7 +51,7 @@ enum ShaveYaksError { // name and visibility are taken from function return type
 Importantly, you can derive on the generated struct, _and_ passthrough attributes, allowing you to use crates like [thiserror].
 ```rust
 
-#[err_as_you_go(derive(Debug, thiserror::Error))]
+#[errgo(derive(Debug, thiserror::Error))]
 fn shave_yaks(
     num_yaks: usize,
     empty_buckets: usize,
@@ -93,7 +93,7 @@ And `err!` macro invocations are replaced with struct instantiations - no matter
 
 If you need to reuse the same variant within a function, just use the normal construction syntax:
 ```rust
-#[err_as_you_go]
+#[errgo]
 fn foo() -> Result<(), FooError> {
     fallible_op().map_err(|e| err!(IoError(io::Error = e)));
     Err(FooError::IoError(todo!()))

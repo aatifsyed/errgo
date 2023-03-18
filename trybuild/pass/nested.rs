@@ -1,6 +1,6 @@
-use err_as_you_go::err_as_you_go;
+use errgo::errgo;
 
-#[err_as_you_go]
+#[errgo]
 fn foo(s: &str) -> Result<usize, FooError> {
     s.parse::<usize>().map_err(|_| err!(ParseError))
 }

@@ -1,6 +1,6 @@
-use err_as_you_go::err_as_you_go;
+use errgo::errgo;
 
-#[err_as_you_go(derive(Clone, Copy))]
+#[errgo(derive(Clone, Copy))]
 fn foo() -> Result<(), FooError> {
     Err(err!(Bar))?;
     Ok(())

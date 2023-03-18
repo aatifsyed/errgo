@@ -1,6 +1,6 @@
-use err_as_you_go::err_as_you_go;
+use errgo::errgo;
 
-#[err_as_you_go(derive(Default))]
+#[errgo(derive(Default))]
 fn foo() -> Result<(), FooError> {
     Err(err!(
         #[default] // derive Default for enum will fail without a #[default] on a variant

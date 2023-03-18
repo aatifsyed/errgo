@@ -7,9 +7,9 @@
 //! then this is the crate for you!
 //!
 //! ```
-//! use err_as_you_go::err_as_you_go;
+//! use errgo::errgo;
 //!
-//! #[err_as_you_go]
+//! #[errgo]
 //! fn shave_yaks(
 //!     num_yaks: usize,
 //!     empty_buckets: usize,
@@ -40,9 +40,9 @@
 //!
 //! Importantly, you can derive on the generated struct, _and_ passthrough attributes, allowing you to use crates like [thiserror].
 //! ```
-//! # use err_as_you_go::err_as_you_go;
+//! # use errgo::errgo;
 //!
-//! #[err_as_you_go(derive(Debug, thiserror::Error))]
+//! #[errgo(derive(Debug, thiserror::Error))]
 //! fn shave_yaks(
 //!     num_yaks: usize,
 //!     empty_buckets: usize,
@@ -84,10 +84,10 @@
 //!
 //! If you need to reuse the same variant within a function, just use the normal construction syntax:
 //! ```
-//! # use err_as_you_go::err_as_you_go;
+//! # use errgo::errgo;
 //! # use std::io;
 //! # fn fallible_op() -> Result<(), io::Error> { todo!() }
-//! #[err_as_you_go]
+//! #[errgo]
 //! fn foo() -> Result<(), FooError> {
 //!     fallible_op().map_err(|e| err!(IoError(io::Error = e)));
 //!     Err(FooError::IoError(todo!()))
@@ -116,7 +116,7 @@ mod data;
 /// # `err!` construction
 /// Instances of `err!` will be parsed like so:
 /// ```
-/// # #[err_as_you_go::err_as_you_go]
+/// # #[errgo::errgo]
 /// # fn foo() -> Result<(), FooError> {
 /// err!(Unity);                        // A unit enum variant
 /// err!(Tuply(usize = 1, char = 'a')); // A tuple enum variant
@@ -130,15 +130,15 @@ mod data;
 /// # Arguments
 /// `derive` arguments are passed through to the generated struct.
 /// ```
-/// # use err_as_you_go::err_as_you_go;
-/// #[err_as_you_go(derive(Debug, Clone, Copy))]
+/// # use errgo::errgo;
+/// #[errgo(derive(Debug, Clone, Copy))]
 /// # fn foo() -> Result<(), FooError> { Ok(()) }
 /// ```
 ///
 /// `attributes` arguments are passed through to the top of the generated struct
 /// ```
-/// # use err_as_you_go::err_as_you_go;
-/// #[err_as_you_go(attributes(
+/// # use errgo::errgo;
+/// #[errgo(attributes(
 ///     #[must_use = "maybe you missed something!"]
 ///     #[repr(u8)]
 /// ))]
@@ -146,13 +146,13 @@ mod data;
 /// ```
 /// `visibility` can be used to override the generated struct's visibility.
 /// ```
-/// # use err_as_you_go::err_as_you_go;
-/// #[err_as_you_go(visibility(pub))]
+/// # use errgo::errgo;
+/// #[errgo(visibility(pub))]
 /// # fn foo() -> Result<(), FooError> { Ok(()) }
 /// ```
 #[proc_macro_attribute]
 #[proc_macro_error]
-pub fn err_as_you_go(
+pub fn errgo(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
@@ -272,7 +272,7 @@ impl syn::visit_mut::VisitMut for ErrAsYouGoVisitor {
                 Ok(variant_with_value) => {
                     self.variants
                         .push(variant_with_value.clone().into_syn_variant());
-                    i.path = path(["err_as_you_go", "__nothing"]);
+                    i.path = path(["errgo", "__nothing"]);
                     i.tokens = variant_with_value
                         .into_syn_expr_with_prefix(Path::from(self.error_name.clone()))
                         .into_token_stream();

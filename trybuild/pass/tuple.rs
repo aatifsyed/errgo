@@ -1,6 +1,6 @@
-use err_as_you_go::err_as_you_go;
+use errgo::errgo;
 
-#[err_as_you_go]
+#[errgo]
 fn foo() -> Result<(), FooError> {
     Err(err!(Bar(usize = 1, char = 'a')))?;
     Ok(())

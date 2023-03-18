@@ -1,8 +1,8 @@
 #![allow(unused)]
 
-use err_as_you_go::err_as_you_go;
+use errgo::errgo;
 
-#[err_as_you_go(derive(Debug, thiserror::Error))]
+#[errgo(derive(Debug, thiserror::Error))]
 fn simple_string_error() -> Result<(), FooError> {
     Err(err!(
         #[error("no bars :(")]
@@ -10,7 +10,7 @@ fn simple_string_error() -> Result<(), FooError> {
     ))
 }
 
-#[err_as_you_go(derive(Debug, thiserror::Error))]
+#[errgo(derive(Debug, thiserror::Error))]
 fn interpolated_string_error(u: usize) -> Result<(), BarError> {
     Err(err!(
         #[error("{0} foos is not enough!")]
@@ -18,7 +18,7 @@ fn interpolated_string_error(u: usize) -> Result<(), BarError> {
     ))
 }
 
-#[err_as_you_go(derive(Debug, thiserror::Error))]
+#[errgo(derive(Debug, thiserror::Error))]
 fn error_implements_from() -> Result<(), BazError> {
     Err(err!(
         #[error("fuck")]

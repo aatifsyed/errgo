@@ -1,6 +1,6 @@
-use err_as_you_go::err_as_you_go;
+use errgo::errgo;
 
-#[err_as_you_go(derive(Clone, Copy, Default))]
+#[errgo(derive(Clone, Copy, Default))]
 fn foo() -> Result<(), FooError> {
     Err(err!(Structy {
         bars: usize = 1,

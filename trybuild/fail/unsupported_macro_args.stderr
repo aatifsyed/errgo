@@ -1,5 +1,5 @@
 error: unexpected argument `bar`, expected `derive` or `attributes` or `visibility`
- --> trybuild/fail/unsupported_macro_args.rs:3:17
+ --> trybuild/fail/unsupported_macro_args.rs:3:9
   |
-3 | #[err_as_you_go(bar)]
-  |                 ^^^
+3 | #[errgo(bar)]
+  |         ^^^
