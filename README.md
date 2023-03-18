@@ -8,13 +8,14 @@
 
 # `errgo`
 
-Generate `enum` error types inline.
+Generate `enum` error variants inline.
 
-If you want:
-- to easy throw errors inline like with [anyhow]
-- to make your error types handleable in a nice enum like [thiserror]
+A slightly type-safer take on [anyhow], where each ad-hoc error is handleable by the caller.
+Designed to play nice with other crates like [strum] or [thiserror].
 
-then this is the crate for you!
+This crate was written to aid wrapping C APIs - transforming e.g error codes to handleable messages.
+It shouldn't really be used for library api entry points - a well-considered top-level error type is likely to be both more readable and forward compatible.
+Consider reading [Study of `std::io::Error`](https://matklad.github.io/2020/10/15/study-of-std-io-error.html) and [this discussion on `r/rust`](https://www.reddit.com/r/rust/comments/11udxy8/comment/jcplqxw).
 
 ```rust
 use errgo::errgo;
@@ -48,7 +49,7 @@ enum ShaveYaksError { // name and visibility are taken from function return type
 }
 ```
 
-Importantly, you can derive on the generated struct, _and_ passthrough attributes, allowing you to use crates like [thiserror].
+Importantly, you can derive on the generated struct, _and_ passthrough attributes, allowing you to use crates like [thiserror] or [strum].
 ```rust
 
 #[errgo(derive(Debug, thiserror::Error))]
@@ -102,3 +103,4 @@ fn foo() -> Result<(), FooError> {
 
 [anyhow]: https://docs.rs/anyhow
 [thiserror]: https://docs.rs/thiserror
+[strum]: https://docs.rs/strum
