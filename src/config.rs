@@ -4,13 +4,14 @@ use syn::{
     parenthesized,
     parse::{Parse, ParseStream, Parser},
     punctuated::Punctuated,
-    Attribute, Path, Token,
+    Attribute, Path, Token, Visibility,
 };
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Config {
     pub derives: Option<Vec<Path>>,
     pub attributes: Option<Vec<Attribute>>,
+    pub visibility: Option<Visibility>,
 }
 
 impl Parse for Config {
@@ -36,7 +37,10 @@ impl Config {
                 return Err(stage.error("`derive` specified more than once"));
             }
             self.derives = Some(derives.into_iter().collect());
-        } else if stage.path.is_ident("attributes") {
+        } else if stage.path.is_ident("attributes")
+            || stage.path.is_ident("attrs")
+            || stage.path.is_ident("attr")
+        {
             let content;
             parenthesized!(content in stage.input);
             let attributes = Punctuated::<_, Token![,]>::parse_terminated_with(
@@ -53,9 +57,16 @@ impl Config {
                 return Err(stage.error("`attributes` specified more than once"));
             }
             self.attributes = Some(attributes);
+        } else if stage.path.is_ident("visibility") || stage.path.is_ident("vis") {
+            let content;
+            parenthesized!(content in stage.input);
+            if self.visibility.is_some() {
+                return Err(stage.error("`visibility` specified more than once"));
+            }
+            self.visibility = Some(content.parse()?);
         } else {
             return Err(stage.error(format!(
-                "unexpected argument `{}`, expected `derive` or `attributes`",
+                "unexpected argument `{}`, expected `derive` or `attributes` or `visibility`",
                 stage.path.to_token_stream()
             )));
         }
@@ -85,6 +96,7 @@ mod tests {
             Config {
                 derives: Some(vec![path(["Hello"]), path(["path", "to", "Goodbye"])]),
                 attributes: None,
+                visibility: None,
             },
         );
     }
@@ -101,11 +113,16 @@ mod tests {
                     #[error("foo")]
                     #[repr(u8)]
                 })),
+                visibility: None,
             },
         );
     }
+
     #[test]
-    fn parse_both() {
+    fn parse_visibility() {}
+
+    #[test]
+    fn parse_all() {
         test_parse(
             quote! {
                 attributes(#[error("foo")], #[repr(u8)]),
@@ -117,6 +134,7 @@ mod tests {
                     #[error("foo")]
                     #[repr(u8)]
                 })),
+                visibility: None,
             },
         );
     }

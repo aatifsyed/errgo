@@ -1,4 +1,4 @@
-error: unexpected argument `bar`, expected `derive` or `attributes`
+error: unexpected argument `bar`, expected `derive` or `attributes` or `visibility`
  --> trybuild/fail/unsupported_macro_args.rs:3:17
   |
 3 | #[err_as_you_go(bar)]

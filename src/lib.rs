@@ -132,7 +132,7 @@ mod data;
 /// ```
 /// # use err_as_you_go::err_as_you_go;
 /// #[err_as_you_go(derive(Debug, Clone, Copy))]
-/// fn foo() -> Result<(), FooError> { Ok(()) }
+/// # fn foo() -> Result<(), FooError> { Ok(()) }
 /// ```
 ///
 /// `attributes` arguments are passed through to the top of the generated struct
@@ -142,7 +142,13 @@ mod data;
 ///     #[must_use = "maybe you missed something!"]
 ///     #[repr(u8)]
 /// ))]
-/// fn foo() -> Result<(), FooError> { Ok(()) }
+/// # fn foo() -> Result<(), FooError> { Ok(()) }
+/// ```
+/// `visibility` can be used to override the generated struct's visibility.
+/// ```
+/// # use err_as_you_go::err_as_you_go;
+/// #[err_as_you_go(visibility(pub))]
+/// # fn foo() -> Result<(), FooError> { Ok(()) }
 /// ```
 #[proc_macro_attribute]
 #[proc_macro_error]
@@ -169,7 +175,7 @@ pub fn err_as_you_go(
         );
         return quote!(#item).into();
     };
-    let error_vis = item.vis.clone();
+    let error_vis = config.visibility.unwrap_or_else(|| item.vis.clone());
 
     let mut visitor = ErrAsYouGoVisitor::new(error_name.clone());
     visitor.visit_item_fn_mut(&mut item);
