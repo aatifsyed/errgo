@@ -29,21 +29,23 @@ impl Config {
         if stage.path.is_ident("derive") {
             let content;
             parenthesized!(content in stage.input);
-            let derives = Punctuated::<Path, Token![,]>::parse_terminated(&content)?;
+            let mut derives = Punctuated::<Path, Token![,]>::parse_terminated(&content)?
+                .into_iter()
+                .collect::<Vec<_>>();
             if derives.is_empty() {
                 return Err(stage.error("`derive` cannot be empty"));
             }
-            if self.derives.is_some() {
-                return Err(stage.error("`derive` specified more than once"));
+            match self.derives.as_mut() {
+                Some(already) => already.append(&mut derives),
+                None => self.derives = Some(derives),
             }
-            self.derives = Some(derives.into_iter().collect());
         } else if stage.path.is_ident("attributes")
             || stage.path.is_ident("attrs")
             || stage.path.is_ident("attr")
         {
             let content;
             parenthesized!(content in stage.input);
-            let attributes = Punctuated::<_, Token![,]>::parse_terminated_with(
+            let mut attributes = Punctuated::<_, Token![,]>::parse_terminated_with(
                 &content,
                 Attribute::parse_outer,
             )?
@@ -53,10 +55,10 @@ impl Config {
             if attributes.is_empty() {
                 return Err(stage.error("`attributes` cannot be empty"));
             }
-            if self.attributes.is_some() {
-                return Err(stage.error("`attributes` specified more than once"));
+            match self.attributes.as_mut() {
+                Some(already) => already.append(&mut attributes),
+                None => self.attributes = Some(attributes),
             }
-            self.attributes = Some(attributes);
         } else if stage.path.is_ident("visibility") || stage.path.is_ident("vis") {
             let content;
             parenthesized!(content in stage.input);
