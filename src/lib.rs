@@ -267,7 +267,7 @@ impl ErrAsYouGoVisitor {
 
 impl syn::visit_mut::VisitMut for ErrAsYouGoVisitor {
     fn visit_macro_mut(&mut self, i: &mut syn::Macro) {
-        if i.path.is_ident("err") {
+        if i.path.is_ident("err") || i.path.is_ident("errgo") {
             match parse2::<VariantWithValue>(i.tokens.clone()) {
                 Ok(variant_with_value) => {
                     self.variants

@@ -7,7 +7,7 @@ fn foo() -> Result<(), FooError> {
         chars: char = 'a'
     }))?;
     Err(err!(Tuply(usize = 1, char = 'a')))?;
-    Err(err!(
+    Err(errgo!(
         #[default]
         Unit
     ))?;
