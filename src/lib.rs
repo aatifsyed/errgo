@@ -101,7 +101,6 @@
 
 use config::Config;
 use data::VariantWithValue;
-use log::debug;
 use proc_macro2::{Ident, Span, TokenStream};
 use proc_macro_error::{emit_error, proc_macro_error};
 use quote::{quote, ToTokens};
@@ -158,17 +157,9 @@ pub fn errgo(
     attr: proc_macro::TokenStream,
     item: proc_macro::TokenStream,
 ) -> proc_macro::TokenStream {
-    pretty_env_logger::try_init_custom_env("RUST_LOG_ERR_AS_YOU_GO").ok();
-
-    debug!("attr={attr:?}");
-
-    //////////////////////
-    // Parse our inputs //
-    //////////////////////
+    // Parse our inputs
     let config = parse_macro_input!(attr as Config);
     let mut item = parse_macro_input!(item as ItemFn);
-
-    debug!("config={config:?}");
 
     let Some(error_name) = get_struct_name_from_return_type(&item.sig.output) else {
         emit_error!(
@@ -179,6 +170,7 @@ pub fn errgo(
     };
     let error_vis = config.visibility.unwrap_or_else(|| item.vis.clone());
 
+    // Make the changes to the syntax tree, and collect the error variants
     let mut visitor = ErrAsYouGoVisitor::new(error_name.clone());
     visitor.visit_item_fn_mut(&mut item);
 
@@ -186,6 +178,7 @@ pub fn errgo(
         emit_error!(src, "{}", e)
     }
 
+    // Assemble our output
     let variants = visitor.variants;
     let derives = match config.derives {
         Some(derives) => quote!(#[derive(
