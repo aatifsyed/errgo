@@ -5,7 +5,7 @@
 //!
 //! This crate was written to aid wrapping C APIs - transforming e.g error codes to handleable messages.
 //! It shouldn't really be used for library api entry points - a well-considered top-level error type is likely to be both more readable and forward compatible.
-//! Consider reading [Study of `std::io::Error`](https://matklad.github.io/2020/10/15/study-of-std-io-error.html) and [this discussion on `r/rust`](https://www.reddit.com/r/rust/comments/11udxy8/comment/jcplqxw).
+//! Consider reading [Study of `std::io::Error`](https://matklad.github.io/2020/10/15/study-of-std-io-error.html) or simply making all generated structs `pub(crate)`.
 //!
 //! ```
 //! use errgo::errgo;
@@ -38,8 +38,11 @@
 //!     }
 //! }
 //! ```
+//! Note that the struct definition is placed just above the function body, meaning that you can't use [`errgo`] on functions in `impl` blocks - you'll have to move the function body to an outer scope, and call it in the impl block.
+//!
 //!
 //! Importantly, you can derive on the generated struct, _and_ passthrough attributes, allowing you to use crates like [thiserror] or [strum].
+//! See the [`errgo`] documentation for other arguments accepted by the macro.
 //! ```
 //! # use errgo::errgo;
 //!
@@ -307,6 +310,8 @@ mod test_utils {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use pretty_assertions::assert_eq;
+
     #[test]
     fn trybuild() {
         let t = trybuild::TestCases::new();
@@ -319,11 +324,11 @@ mod tests {
         let expected = std::process::Command::new("cargo")
             .arg("readme")
             .output()
-            .expect("couldn't run `cargo readme`");
-        let expected = String::from_utf8_lossy(&expected.stdout);
-        let actual = std::fs::read("README.md").expect("couldn't read README.md");
-        let actual = String::from_utf8_lossy(&actual);
-        pretty_assertions::assert_eq!(expected, actual);
+            .expect("couldn't run `cargo readme`")
+            .stdout;
+        let expected = String::from_utf8(expected).expect("`cargo readme` output wasn't UTF-8");
+        let actual = include_str!("../README.md");
+        assert_eq!(expected, actual);
     }
 
     #[test]
