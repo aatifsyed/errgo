@@ -38,11 +38,11 @@
 //!     }
 //! }
 //! ```
-//! Note that the struct definition is placed just above the function body, meaning that you can't use [`errgo`] on functions in `impl` blocks - you'll have to move the function body to an outer scope, and call it in the impl block.
+//! Note that the struct definition is placed just above the function body, meaning that you can't use [`macro@errgo`] on functions in `impl` blocks - you'll have to move the function body to an outer scope, and call it in the impl block.
 //!
 //!
 //! Importantly, you can derive on the generated struct, _and_ passthrough attributes, allowing you to use crates like [thiserror] or [strum].
-//! See the [`errgo`] documentation for other arguments accepted by the macro.
+//! See the [`macro@errgo`] documentation for other arguments accepted by the macro.
 //! ```
 //! # use errgo::errgo;
 //!
